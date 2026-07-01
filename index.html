@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-96x96.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="stylesheet" href="css/primeMinisters.css"/>
+<link href="https://fonts.googleapis.com/css?family=Figtree" rel="stylesheet">
+<script src="js/d3.min.js"></script>
+<title>Will Andy Burnham be the 1st Northern Prime Minister?</title>
+<body>
+<div class="chartTooltip"></div>
+<div class="divContainer">
+ <div class="title"><span>Will <span class="highlightBlack">Andy Burnham</span> be the 1st  <span class="highlightNorth">Northern</span> Prime Minister?</span></div>
+    <div class="subtitle"><span class="innerSubtitle">My husband - from Cumbria - overheard this very question at the weekend..... Obviously the answer is no, but it led him on a Wikipedia trail which I thought would make a fun personal project.</span></div>
+    <div class="map"></div>
+    <div class="menu">
+        <a href="?home" class="menu-item" data-view="home">home</a>
+        <span class="menu-sep">|</span>
+        <a href="?byTime" class="menu-item" data-view="byTime">over time</a>
+        <span class="menu-sep">|</span>
+        <a href="?byParty" class="menu-item" data-view="byParty">by party</a>
+    </div>
+    <div class="chartDiv"></div>
+    <div class="footer"><br>a personal project by <a href="https://bmdata.co.uk/">BM Data Visualisation</a><br><br>
+        if you're looking for some data viz magic please <a href="mailto:bryony@bmdata.co.uk">get in touch.</a></div>
+</div>
+</body>
+
+<script src="js/d3Charts.js"></script>
+<script>
+
+    // Determine viewType from the URL on page load
+    function getViewType() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('byTime')) return 'byTime';
+        if (params.has('byParty')) return 'byParty';
+        return 'home'; // default if none of the above match
+    }
+
+    window.viewType = getViewType();
+
+    // Set the active class to match viewType
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.view === window.viewType);
+    });
+
+    let chartData = null;
+    const throttleLimit = 20;
+    // and handle resizing
+    const resizeThrottle = () => {
+     let inThrottle = false;
+     return () => {
+      if (!inThrottle) {
+       handleResize(false)
+       inThrottle = true;
+       setTimeout(() => (inThrottle = false), throttleLimit);
+      }
+     };
+    };
+    const handleResize = () => {
+        if(chartData === null) return;
+        const div = d3.select(".map");
+        const { clientWidth, clientHeight} = div.node();
+
+        drawMap(div,chartData, clientWidth,clientHeight);
+        const chartDiv = d3.select(".chartDiv");
+        const { clientWidth: chartWidth} = chartDiv.node();
+        drawChart(chartDiv,chartData,chartWidth,window.innerHeight);
+    }
+
+
+    // Add throttled event listener which redraws the tree every 0.1 second rather than nanosecond
+    window.addEventListener("resize", resizeThrottle());
+
+    const loadChart = async () => {
+     const primeMinisters = await d3.json("data/primeministers.json");
+     const ukIrelandAll = await d3.json("data/ukIrelandAll.json")
+        chartData = {primeMinisters,ukIrelandAll};
+     handleResize(true);
+    }
+
+    loadChart();
+
+</script>
+</html>

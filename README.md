@@ -1,2 +1,3 @@
-# UK_pms
-Personal Project looking at UK Prime Minister data
+# canadium chart 
+
+base repo to get chart working before transfer to HubSpot
