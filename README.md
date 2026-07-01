@@ -1,3 +1,3 @@
-# canadium chart 
+# UK Prime Ministers Personal Project
 
-base repo to get chart working before transfer to HubSpot
+

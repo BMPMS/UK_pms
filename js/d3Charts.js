@@ -25,11 +25,12 @@ const measureWidth = (text, fontSize) => {
 }
 
 const drawChart = (div, data, width,windowHeight) => {
+
     const  viewType = window.viewType || 'home';
     let svg = div.select(".chartSvg");
     let chartHeight = windowHeight - headerMenuHeight;
 
-
+    // append non data dependent elements
     if (svg.empty()) {
         svg = div.append("svg").attr("class","noselect chartSvg");
         svg.append("rect").attr("class","northBackRect");
@@ -48,10 +49,12 @@ const drawChart = (div, data, width,windowHeight) => {
         svg.append("g").attr("class","xAxisTime");
 
     }
+
+    // size svg
     svg.attr("width",`${width}px`)
         .attr("height",`${chartHeight}px`)
 
-
+    // key variables
     const {primeMinisters} = data;
     const dotRadius = 19;
     const labelHeight = 30;
@@ -60,7 +63,9 @@ const drawChart = (div, data, width,windowHeight) => {
     let margin = {labelTop: dotRadius * 2, label: 140,left: 15, right: 15 ,top: dotRadius * 5, bottom: dotRadius * 3};
     const yearExtent = d3.extent(primeMinisters, (d) => d.midYear);
 
+    // various data manipulations used when defining the chart positions
 
+    // group by minParty (Con, Lab or Lib)
     const byPartyNorth = [
         ...d3.group(
             primeMinisters.filter((f) => f.Location === "N" || f.Location === "NS"),
@@ -76,19 +81,28 @@ const drawChart = (div, data, width,windowHeight) => {
         )
     ]
 
-
+    // the data sorts naturally into 10 or 20 year bins depending on the width
+    // mobile view goes vertical so switches back to 10 year bins as we now have space
     const binBig = 30;
     const binThresholdWidth = dotHeight * (binBig + 0.25);
     const binThresholds = width < 800 || (width - margin.left - margin.right) > binThresholdWidth ? 30 : 16;
 
+    // adjust margins for time view
+    let timeThresholdWidth = binThresholdWidth;
     if(binThresholds === 16 && viewType === 'byTime') {
         const smallBinThresholdWidth = dotHeight * 16.25;
         margin.left = (width - smallBinThresholdWidth - dotRadius )/2;
         margin.right = (width - smallBinThresholdWidth - dotRadius)/2;
+        timeThresholdWidth = smallBinThresholdWidth;
     } else if (viewType === 'byTime') {
         margin.left = (width - binThresholdWidth - dotRadius )/2;
         margin.right = (width - binThresholdWidth - dotRadius)/2;
     }
+    // adjusts container width for time view
+    const divContainerWidth = viewType === 'byTime' || width < 800? window.innerWidth : timeThresholdWidth;
+    d3.select(".divContainer").style("width",`${divContainerWidth}px`);
+
+
     const chartWidth = width - margin.left - margin.right;
     const dotsPerRow = Math.floor(chartWidth/dotHeight) - 1;
 
@@ -215,7 +229,7 @@ const drawChart = (div, data, width,windowHeight) => {
                     xCount: Math.floor(partyIndex / partyDotsPerRow) + 1
                 },
                 r: dotRadius,
-                photo: `/images/${e.photoName}`,
+                photo: `images/${e.photoName}`,
                 photoName: e.photoName,
                 data: e,
                 isSouth
