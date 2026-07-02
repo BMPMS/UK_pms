@@ -10,7 +10,7 @@
 <div class="chartTooltip"></div>
 <div class="divContainer">
  <div class="title"><span>Will <span class="highlightBlack">Andy Burnham</span> be the 1st  <span class="highlightNorth">Northern</span> Prime Minister?</span></div>
-    <div class="subtitle"><span class="innerSubtitle">My husband - from Cumbria - overheard this very question at the weekend..... Obviously the answer is no, but it led him on a Wikipedia trail which I thought would make a fun personal project.</span></div>
+    <div class="subtitle">A friend - a Northerner - overheard this very question at the weekend..... Obviously the answer is NO, but it led him on a Wikipedia trail which I thought would make a fun personal project.</span></div>
     <div class="map"></div>
     <div class="menu">
         <a href="?home" class="menu-item" data-view="home">home</a>
@@ -20,8 +20,8 @@
         <a href="?byParty" class="menu-item" data-view="byParty">by party</a>
     </div>
     <div class="chartDiv"></div>
-    <div class="footer"><br>a personal project by <a href="https://bmdata.co.uk/">BM Data Visualisation</a><br><br>
-        if you're looking for some data viz magic please <a href="mailto:bryony@bmdata.co.uk">get in touch.</a></div>
+    <div class="footer">a personal project by <a href="https://bmdata.co.uk/">BM Data Visualisation</a>.
+        If you're looking for some data viz magic please <a href="mailto:bryony@bmdata.co.uk">get in touch.</a></div>
 </div>
 </body>
 
@@ -63,8 +63,8 @@
 
         drawMap(div,chartData, clientWidth,clientHeight);
         const chartDiv = d3.select(".chartDiv");
-        const { clientWidth: chartWidth} = chartDiv.node();
-        drawChart(chartDiv,chartData,chartWidth,window.innerHeight);
+
+        drawChart(chartDiv,chartData,window.innerWidth,window.innerHeight);
     }
 
 

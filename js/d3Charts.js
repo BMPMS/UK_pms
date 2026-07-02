@@ -16,7 +16,7 @@ const colors = {
     Gy: "#E5E7EB" // Light grey
 };
 
-const headerMenuHeight = 300;
+const headerMenuHeight = 340;
 
 const measureWidth = (text, fontSize) => {
     const context = document.createElement("canvas").getContext("2d");
@@ -26,6 +26,7 @@ const measureWidth = (text, fontSize) => {
 
 const drawChart = (div, data, width,windowHeight) => {
 
+    const isMobile = width < 800;
     const  viewType = window.viewType || 'home';
     let svg = div.select(".chartSvg");
     let chartHeight = windowHeight - headerMenuHeight;
@@ -60,7 +61,7 @@ const drawChart = (div, data, width,windowHeight) => {
     const labelHeight = 30;
     const dotHeight = dotRadius * 2.5;
     const rectExtra = dotHeight * 0.25;
-    let margin = {labelTop: dotRadius * 2, label: 140,left: 15, right: 15 ,top: dotRadius * 5, bottom: dotRadius * 3};
+    let margin = {labelTop: dotRadius * 2, label: 140,left: 15, right: 15 ,top: dotRadius * 5, bottom: 25};
     const yearExtent = d3.extent(primeMinisters, (d) => d.midYear);
 
     // various data manipulations used when defining the chart positions
@@ -84,24 +85,26 @@ const drawChart = (div, data, width,windowHeight) => {
     // the data sorts naturally into 10 or 20 year bins depending on the width
     // mobile view goes vertical so switches back to 10 year bins as we now have space
     const binBig = 30;
-    const binThresholdWidth = dotHeight * (binBig + 0.25);
-    const binThresholds = width < 800 || (width - margin.left - margin.right) > binThresholdWidth ? 30 : 16;
+    const binThresholdWidth = dotHeight * (binBig + 1.25);
+    const binThresholds = isMobile || (width - margin.left - margin.right) > binThresholdWidth ? 30 : 16;
 
+    const isTimeSmall = (viewType === 'byTime' || viewType === 'byParty') && isMobile;
     // adjust margins for time view
     let timeThresholdWidth = binThresholdWidth;
     if(binThresholds === 16 && viewType === 'byTime') {
-        const smallBinThresholdWidth = dotHeight * 16.25;
-        margin.left = (width - smallBinThresholdWidth - dotRadius )/2;
-        margin.right = (width - smallBinThresholdWidth - dotRadius)/2;
+        const smallBinThresholdWidth = dotHeight * 17.25;
         timeThresholdWidth = smallBinThresholdWidth;
-    } else if (viewType === 'byTime') {
-        margin.left = (width - binThresholdWidth - dotRadius )/2;
-        margin.right = (width - binThresholdWidth - dotRadius)/2;
     }
     // adjusts container width for time view
-    const divContainerWidth = viewType === 'byTime' || width < 800? window.innerWidth : timeThresholdWidth;
-   // d3.select(".divContainer").style("width",`${divContainerWidth}px`);
-
+    const divContainerWidth = viewType === 'byTime' && !isMobile? timeThresholdWidth:window.innerWidth ;
+    const {clientWidth: currentWidth} = div;
+    if(currentWidth !== divContainerWidth){
+        d3.select(".divContainer").style("width",`${divContainerWidth}px`);
+        width = divContainerWidth;
+        svg.attr("width",`${width}px`);
+        margin.left = viewType === 'byTime' && isTimeSmall ? (width - binThresholdWidth - dotRadius )/2 : 15;
+        margin.right =  viewType === 'byTime' && isTimeSmall ? (width - binThresholdWidth - dotRadius)/2 : 15;
+    }
 
     const chartWidth = width - margin.left - margin.right;
     const dotsPerRow = Math.floor(chartWidth/dotHeight) - 1;
@@ -126,7 +129,7 @@ const drawChart = (div, data, width,windowHeight) => {
             g.Location === "N" || g.Location === "NS" ? "North" : "Other"
         )
     ]
-    const timeBandWidth = (viewType === 'byTime' ? dotHeight : dotHeight/2) * (binThresholds-1);
+    const timeBandWidth = (viewType === 'byTime' ? dotHeight : dotHeight * 0.75) * (binThresholds-1);
 
 
     const getPartyPositions = () => {
@@ -144,7 +147,7 @@ const drawChart = (div, data, width,windowHeight) => {
         let propAcc = 0;
         let totalWidth =
             width - margin.left - margin.right - padding * partyType.length;
-        if(width < 800){
+        if(isMobile){
             totalWidth = timeBandWidth;
         }
         return partyMax.reduce((acc, entry) => {
@@ -233,10 +236,10 @@ const drawChart = (div, data, width,windowHeight) => {
     const getPos = (d) => {
         if( viewType === "home") return d.homePos;
         if(viewType === "byTime") {
-            if(width < 800) return d.timePosSmall;
+            if(isMobile) return d.timePosSmall;
             return d.timePos;
         }
-        if(width < 800) return d.partyPosSmall;
+        if(isMobile) return d.partyPosSmall;
         return d.partyPos
     };
 
@@ -259,12 +262,12 @@ const drawChart = (div, data, width,windowHeight) => {
     const timeSmallAxisWidth = labelHeight * 1.5
     const timeWidth = (chartWidth - timeSmallAxisWidth)/2;
     const timeSouthLeft = timeWidth + timeSmallAxisWidth;
-    const isTimeSmall = (viewType === 'byTime' || viewType === 'byParty') && width < 800
 
     const newChartHeight = southStart + southHeight + margin.top + margin.bottom;
     if(newChartHeight > chartHeight){
         chartHeight = newChartHeight;
     }
+    console.log(chartHeight, windowHeight - headerMenuHeight);
     svg.attr("height", `${chartHeight}px`);
     if(isTimeSmall) {
         svg.attr("height", `${timeBandWidth + margin.top + margin.bottom}px`);
@@ -273,8 +276,8 @@ const drawChart = (div, data, width,windowHeight) => {
    const totalNorth = primeMinisters.filter((f) => f.Location === "N" || f.Location === "NS");
    const northProp = totalNorth.length/primeMinisters.length;
    const southProp = 1 - northProp;
-   const fontSizeBig = width < 800 ? 18 : 24;
-   const fontSizeSmall = width < 800 ? 14 : 16;
+   const fontSizeBig = isMobile ? 18 : 24;
+   const fontSizeSmall = isMobile ? 14 : 16;
 
    const northPercentVal = d3.format(".0%")(northProp);
 
@@ -394,11 +397,11 @@ const drawChart = (div, data, width,windowHeight) => {
 
     xAxisTime
         .attr("display", viewType === "byTime" ? "block" : "none")
-        .call(d3[width < 800 ? 'axisLeft' : 'axisBottom'](timeXScale).tickSizeOuter(0).tickValues(xScaleTimeBands))
+        .call(d3[isMobile ? 'axisLeft' : 'axisBottom'](timeXScale).tickSizeOuter(0).tickValues(xScaleTimeBands))
         .attr(
             "transform",
-            `translate(${width < 800 ? width/2 : margin.left + dotRadius  * 1.9},${
-               width < 800 ? margin.top :  southStart - labelHeight + margin.labelTop
+            `translate(${isMobile ? width/2 : margin.left + dotRadius  * 1.9},${
+                isMobile ? margin.top :  southStart - labelHeight + margin.labelTop
             })`
         );
 
@@ -427,7 +430,7 @@ const drawChart = (div, data, width,windowHeight) => {
     partyLabelGroup.attr("transform", (d) => {
         const partyPos = partyPositions.find((f) => f.party === d);
         if(viewType === "byParty") {
-            if(width < 800){
+            if(isMobile){
                 return `translate(${margin.left + timeWidth + labelHeight * 0.7},${partyPos.labelX + margin.labelTop + labelHeight}) rotate(90)`;
             }
             const yPos = southStart + fontSizeBig/2;
@@ -437,12 +440,13 @@ const drawChart = (div, data, width,windowHeight) => {
         return ""
     })
 
+    const labelMapper = {"Conservative": "Tory / Conservative", "Liberal": "Whig / Liberal", "Labour" :"Labour"}
     partyLabelGroup.select(".partyLabel")
         .attr("font-size",fontSizeBig)
         .attr("fill",(d) => colors[d])
         .style("dominant-baseline","middle")
         .attr("text-anchor","middle")
-        .text((d) => d)
+        .text((d) => labelMapper[d])
 
     partyLabelGroup.select(".partyLabelRect")
         .attr("font-size",fontSizeBig)
