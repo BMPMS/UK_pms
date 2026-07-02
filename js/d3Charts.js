@@ -100,19 +100,11 @@ const drawChart = (div, data, width,windowHeight) => {
     }
     // adjusts container width for time view
     const divContainerWidth = viewType === 'byTime' || width < 800? window.innerWidth : timeThresholdWidth;
-    d3.select(".divContainer").style("width",`${divContainerWidth}px`);
+   // d3.select(".divContainer").style("width",`${divContainerWidth}px`);
 
 
     const chartWidth = width - margin.left - margin.right;
     const dotsPerRow = Math.floor(chartWidth/dotHeight) - 1;
-
-    const xBands = byPartyNorth.map((m) => m[0]);
-
-    const xScale = d3
-        .scaleBand()
-        .padding(0.2)
-        .range([0, chartWidth])
-        .domain(xBands)
 
     const nodeBinsNorth = d3
         .bin()
@@ -134,7 +126,7 @@ const drawChart = (div, data, width,windowHeight) => {
             g.Location === "N" || g.Location === "NS" ? "North" : "Other"
         )
     ]
-    const timeBandWidth = (viewType === 'byTime' ? dotHeight : dotRadius) * (binThresholds-1);
+    const timeBandWidth = (viewType === 'byTime' ? dotHeight : dotHeight/2) * (binThresholds-1);
 
 
     const getPartyPositions = () => {
@@ -362,7 +354,6 @@ const drawChart = (div, data, width,windowHeight) => {
         .attr("fill",colors.I)
         .text("Elsewhere");
 
-
     svg.select(".southBackRect")
         .attr("fill",colors.S)
         .attr("fill-opacity",0.1)
@@ -384,13 +375,11 @@ const drawChart = (div, data, width,windowHeight) => {
         (g) => getPos(g).row
     )];
 
-    const xWidth = viewType === 'byParty' ? xScale.bandwidth() : chartWidth;
-
     pmPositioned.map((m) => {
         const position = getPos(m);
         const circleRow = m.isSouth ? circleRowSouth : circleRowNorth;
         const rowCircles = circleRow.find((f) => f[0] === position.row);
-        const xMargin = xWidth  -((rowCircles[1] - 1) * dotHeight);
+        const xMargin = chartWidth  -((rowCircles[1] - 1) * dotHeight);
         let extraX = xMargin/2;
          if (viewType === "byTime" || viewType === "byParty") {
             extraX = dotHeight * 0.75;
@@ -422,6 +411,59 @@ const drawChart = (div, data, width,windowHeight) => {
         .attr("x",0)
         .attr("font-size", 16)
         .text((d) => 1720 + (binIncrement * d));
+
+
+    const partyLabelGroup = svg
+        .selectAll(".partyLabelGroup")
+        .data(viewType === 'byParty' ? byPartySouth.map((m) => m[0]) : [])
+        .join((group) => {
+            const enter = group.append("g").attr("class", "partyLabelGroup");
+            enter.append("rect").attr("class", "partyLabelRect");
+            enter.append("text").attr("class", "partyLabel");
+
+            return enter;
+        });
+
+    partyLabelGroup.attr("transform", (d) => {
+        const partyPos = partyPositions.find((f) => f.party === d);
+        if(viewType === "byParty") {
+            if(width < 800){
+                return `translate(${margin.left + timeWidth + labelHeight * 0.7},${partyPos.labelX + margin.labelTop + labelHeight}) rotate(90)`;
+            }
+            const yPos = southStart + fontSizeBig/2;
+            return `translate(${partyPos.labelX + margin.left + rectExtra},${yPos})`;
+        }
+        // only applies to byParty
+        return ""
+    })
+
+    partyLabelGroup.select(".partyLabel")
+        .attr("font-size",fontSizeBig)
+        .attr("fill",(d) => colors[d])
+        .style("dominant-baseline","middle")
+        .attr("text-anchor","middle")
+        .text((d) => d)
+
+    partyLabelGroup.select(".partyLabelRect")
+        .attr("font-size",fontSizeBig)
+        .attr("fill",(d) => colors[d])
+        .attr("fill-opacity",0.1)
+        .attr("rx",4)
+        .attr("ry",4)
+        .attr("height", labelHeight)
+        .attr("width",(d) => {
+            const partyPos = partyPositions.find((f) => f.party === d);
+            return partyPos.partyWidth;
+        })
+        .attr("x",(d) => {
+            const partyPos = partyPositions.find((f) => f.party === d);
+            return -partyPos.partyWidth/2;
+        })
+        .attr("y", -labelHeight * 0.55)
+        .style("dominant-baseline","middle")
+        .attr("text-anchor","middle")
+        .text((d) => d)
+
 
     const teamGroup = svg
         .selectAll(".teamGroup")

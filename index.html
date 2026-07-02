@@ -50,7 +50,7 @@
      let inThrottle = false;
      return () => {
       if (!inThrottle) {
-       handleResize(false)
+       handleResize()
        inThrottle = true;
        setTimeout(() => (inThrottle = false), throttleLimit);
       }
@@ -69,7 +69,7 @@
 
 
     // Add throttled event listener which redraws the tree every 0.1 second rather than nanosecond
-    window.addEventListener("resize", resizeThrottle());
+    window.addEventListener("resize", handleResize);
 
     const loadChart = async () => {
      const primeMinisters = await d3.json("data/primeministers.json");
