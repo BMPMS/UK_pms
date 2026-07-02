@@ -285,16 +285,16 @@ const drawChart = (div, data, width, windowHeight, transitionTime) => {
     const totalNorth = primeMinisters.filter(isNorthern);
     const northProp = totalNorth.length / primeMinisters.length;
     const southProp = 1 - northProp;
-    const fontSizeBig = isMobile ? 18 : 24;
-    const fontSizeSmall = isMobile ? 14 : 16;
+    const fontSizeBig = isMobile ? (width < 450 ? 16 : 18) : 24;
+    const fontSizeSmall = isMobile ? (width < 450 ? 12 :14) : 16;
 
     const northPercentVal = d3.format(".0%")(northProp);
 
-    const bornText = width < 600 ? " " : " born in the ";
+    const bornText = width < 600 && viewType !== 'home' ? " " : " born in the ";
 
     // svg text elements are separated into tspan's to allow different word styling
     const northWidth = measureWidth(northPercentVal, fontSizeBig)
-        + measureWidth(bornText, fontSizeSmall)
+        + measureWidth(" born in the ", fontSizeSmall)
         + measureWidth("North", fontSizeBig);
 
     svg.select(".northLabel")
@@ -310,7 +310,7 @@ const drawChart = (div, data, width, windowHeight, transitionTime) => {
 
     svg.select(".northLabelText")
         .attr("font-size", fontSizeSmall)
-        .text(bornText);
+        .text(" born in the ");
 
     svg.select(".northLabelNorth")
         .attr("text-anchor", "start")
