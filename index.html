@@ -1,23 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-96x96.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link rel="stylesheet" href="css/primeMinisters.css"/>
 <link href="https://fonts.googleapis.com/css?family=Figtree" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <script src="js/d3.min.js"></script>
 <title>Will Andy Burnham be the 1st Northern Prime Minister?</title>
 <body>
 <div class="chartTooltip"></div>
 <div class="divContainer">
- <div class="title"><span>Will <span class="highlightBlack">Andy Burnham</span> be the 1st  <span class="highlightNorth">Northern</span> Prime Minister?</span></div>
-    <div class="subtitle">A friend - a Northerner - overheard this very question at the weekend..... Obviously the answer is NO, but it led him on a Wikipedia trail which I thought would make a fun personal project.</span></div>
+    <div class="title"><span>Will <span class="highlightBlack">Andy Burnham</span> be the 1st  <span
+            class="highlightNorth">Northern</span> Prime Minister?</span></div>
+    <div class="subtitle"><span>A friend - a <span class="highlightNorth">Northerner</span> - overheard this very question at the weekend.  Obviously the answer is NO, but it led him on a Wikipedia trail which I thought would make a fun personal project.</span>
+    </div>
     <div class="map"></div>
     <div class="menu">
-        <a href="?home" class="menu-item" data-view="home">home</a>
+        <span class="menu-item active" id="home">home</span>
         <span class="menu-sep">|</span>
-        <a href="?byTime" class="menu-item" data-view="byTime">over time</a>
+        <span class="menu-item" id="byTime">over time</span>
         <span class="menu-sep">|</span>
-        <a href="?byParty" class="menu-item" data-view="byParty">by party</a>
+        <span class="menu-item" id="byParty">by party</span>
     </div>
     <div class="chartDiv"></div>
     <div class="footer">a personal project by <a href="https://bmdata.co.uk/">BM Data Visualisation</a>.
@@ -28,54 +31,54 @@
 <script src="js/d3Charts.js"></script>
 <script>
 
-    // Determine viewType from the URL on page load
-    function getViewType() {
-        const params = new URLSearchParams(window.location.search);
-        if (params.has('byTime')) return 'byTime';
-        if (params.has('byParty')) return 'byParty';
-        return 'home'; // default if none of the above match
+
+    let previousViewType = 'home';
+
+    const redrawChart = () => {
+        const chartDiv = d3.select(".chartDiv");
+        // only transition if switching views
+        const transitionTime = window.viewType === previousViewType ? 0 : 800;
+        drawChart(chartDiv, chartData, window.innerWidth, window.innerHeight, transitionTime);
+        previousViewType = window.viewType;
     }
 
-    window.viewType = getViewType();
+    window.viewType = 'home';
+    window.includeScotland = true;
 
     // Set the active class to match viewType
-    document.querySelectorAll('.menu-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.view === window.viewType);
-    });
-
+    d3.selectAll('.menu-item')
+        .attr("cursor", "pointer")
+        .on("click", (event) => {
+            const id = event.currentTarget.id;
+            d3.selectAll('.menu-item').classed('active', (d, i, objects) => {
+                const itemId = objects[i].id;
+                return id === itemId;
+            })
+            window.viewType = id;
+            redrawChart();
+        })
     let chartData = null;
-    const throttleLimit = 20;
-    // and handle resizing
-    const resizeThrottle = () => {
-     let inThrottle = false;
-     return () => {
-      if (!inThrottle) {
-       handleResize()
-       inThrottle = true;
-       setTimeout(() => (inThrottle = false), throttleLimit);
-      }
-     };
-    };
+
     const handleResize = () => {
-        if(chartData === null) return;
+        if (chartData === null) return;
         const div = d3.select(".map");
-        const { clientWidth, clientHeight} = div.node();
+        const {clientWidth, clientHeight} = div.node();
 
-        drawMap(div,chartData, clientWidth,clientHeight);
-        const chartDiv = d3.select(".chartDiv");
 
-        drawChart(chartDiv,chartData,window.innerWidth,window.innerHeight);
+        drawMap(div, chartData, clientWidth, clientHeight, redrawChart);
+        redrawChart();
     }
 
-
-    // Add throttled event listener which redraws the tree every 0.1 second rather than nanosecond
+    // resize event listener.  Skipped the throttle since this is a personal project with limited scope
     window.addEventListener("resize", handleResize);
 
+
     const loadChart = async () => {
-     const primeMinisters = await d3.json("data/primeministers.json");
-     const ukIrelandAll = await d3.json("data/ukIrelandAll.json")
-        chartData = {primeMinisters,ukIrelandAll};
-     handleResize(true);
+        // load data
+        const primeMinisters = await d3.json("data/primeministers.json");
+        const ukIrelandAll = await d3.json("data/ukIrelandAll.json")
+        chartData = {primeMinisters, ukIrelandAll};
+        handleResize(true);
     }
 
     loadChart();

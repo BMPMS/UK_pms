@@ -24,52 +24,50 @@ const measureWidth = (text, fontSize) => {
     return context.measureText(text).width;
 }
 
-const drawChart = (div, data, width,windowHeight) => {
+const isNorthern = (d) => window.includeScotland ? d.Location === "N" || d.Location === "NS" : d.Location === "N";
+
+const drawChart = (div, data, width, windowHeight, transitionTime) => {
 
     const isMobile = width < 800;
-    const  viewType = window.viewType || 'home';
+    const viewType = window.viewType || 'home';
+
     let svg = div.select(".chartSvg");
     let chartHeight = windowHeight - headerMenuHeight;
 
     // append non data dependent elements
     if (svg.empty()) {
-        svg = div.append("svg").attr("class","noselect chartSvg");
-        svg.append("rect").attr("class","northBackRect");
-        svg.append("rect").attr("class","southBackRect");
-        const northLabel = svg.append("text").attr("class","northLabel");
+        svg = div.append("svg").attr("class", "noselect chartSvg");
+        svg.append("rect").attr("class", "northBackRect");
+        svg.append("rect").attr("class", "southBackRect");
+        const northLabel = svg.append("text").attr("class", "northLabel");
         northLabel.append("tspan").attr("class", "northLabelPercent")
         northLabel.append("tspan").attr("class", "northLabelText")
         northLabel.append("tspan").attr("class", "northLabelNorth")
 
-        const southLabel = svg.append("text").attr("class","southLabel");
+        const southLabel = svg.append("text").attr("class", "southLabel");
         southLabel.append("tspan").attr("class", "southLabelPercent")
         southLabel.append("tspan").attr("class", "southLabelText")
         southLabel.append("tspan").attr("class", "southLabelSouth")
         southLabel.append("tspan").attr("class", "southLabelText2")
         southLabel.append("tspan").attr("class", "southLabelElsewhere")
-        svg.append("g").attr("class","xAxisTime");
-
+        svg.append("g").attr("class", "xAxisTime");
     }
-
     // size svg
-    svg.attr("width",`${width}px`)
-        .attr("height",`${chartHeight}px`)
-
+    svg.attr("width", `${width}px`)
+        .attr("height", `${chartHeight}px`)
     // key variables
     const {primeMinisters} = data;
-    const dotRadius = 19;
+    const dotRadius = width < 450 ? 15.5 : 19;
     const labelHeight = 30;
     const dotHeight = dotRadius * 2.5;
     const rectExtra = dotHeight * 0.25;
-    let margin = {labelTop: dotRadius * 2, label: 140,left: 15, right: 15 ,top: dotRadius * 5, bottom: 25};
+    let margin = {labelTop: dotRadius * 2, label: 140, left: 15, right: 15, top: dotRadius * 5, bottom: 25};
     const yearExtent = d3.extent(primeMinisters, (d) => d.midYear);
 
-    // various data manipulations used when defining the chart positions
-
-    // group by minParty (Con, Lab or Lib)
+    // group by minParty (Con, Lab or Lib) - for party view
     const byPartyNorth = [
         ...d3.group(
-            primeMinisters.filter((f) => f.Location === "N" || f.Location === "NS"),
+            primeMinisters.filter(isNorthern),
             (d) =>
                 d.minParty
         )
@@ -77,11 +75,10 @@ const drawChart = (div, data, width,windowHeight) => {
 
     const byPartySouth = [
         ...d3.group(
-            primeMinisters.filter((f) => !(f.Location === "N" || f.Location === "NS")),
+            primeMinisters.filter((f) => !isNorthern(f)),
             (d) => d.minParty
         )
     ]
-
     // the data sorts naturally into 10 or 20 year bins depending on the width
     // mobile view goes vertical so switches back to 10 year bins as we now have space
     const binBig = 30;
@@ -91,50 +88,51 @@ const drawChart = (div, data, width,windowHeight) => {
     const isTimeSmall = (viewType === 'byTime' || viewType === 'byParty') && isMobile;
     // adjust margins for time view
     let timeThresholdWidth = binThresholdWidth;
-    if(binThresholds === 16 && viewType === 'byTime') {
-        const smallBinThresholdWidth = dotHeight * 17.25;
-        timeThresholdWidth = smallBinThresholdWidth;
+    if (binThresholds === 16 && viewType === 'byTime') {
+        timeThresholdWidth = dotHeight * 17.25;
     }
     // adjusts container width for time view
-    const divContainerWidth = viewType === 'byTime' && !isMobile? timeThresholdWidth:window.innerWidth ;
+    const divContainerWidth = viewType === 'byTime' && !isMobile ? timeThresholdWidth : window.innerWidth;
     const {clientWidth: currentWidth} = div;
-    if(currentWidth !== divContainerWidth){
-        d3.select(".divContainer").style("width",`${divContainerWidth}px`);
+    if (currentWidth !== divContainerWidth) {
+        d3.select(".divContainer").style("width", `${divContainerWidth}px`);
         width = divContainerWidth;
-        svg.attr("width",`${width}px`);
-        margin.left = viewType === 'byTime' && isTimeSmall ? (width - binThresholdWidth - dotRadius )/2 : 15;
-        margin.right =  viewType === 'byTime' && isTimeSmall ? (width - binThresholdWidth - dotRadius)/2 : 15;
+        svg.attr("width", `${width}px`);
     }
 
     const chartWidth = width - margin.left - margin.right;
-    const dotsPerRow = Math.floor(chartWidth/dotHeight) - 1;
+    const dotsPerRow = Math.floor(chartWidth / dotHeight) - 1;
 
+    // node bins - for by time view
     const nodeBinsNorth = d3
         .bin()
         .domain([yearExtent[0] || 0, yearExtent[1] || 0])
         .thresholds(binThresholds)
         .value((d) => d.midYear || 0)(
-            primeMinisters.filter((f) => f.Location === "N" || f.Location === "NS")
+            primeMinisters.filter(isNorthern)
         )
     const nodeBinsSouth = d3
         .bin()
         .domain([yearExtent[0] || 0, yearExtent[1] || 0])
         .thresholds(binThresholds)
         .value((d) => d.midYear || 0)(
-            primeMinisters.filter((f) => !(f.Location === "N" || f.Location === "NS"))
+            primeMinisters.filter((f) => !isNorthern(f))
         )
 
+    // byLocation - for home view
     const byLocation = [
         ...d3.group(primeMinisters, (g) =>
-            g.Location === "N" || g.Location === "NS" ? "North" : "Other"
+            isNorthern(g) ? "North" : "Other"
         )
     ]
-    const timeBandWidth = (viewType === 'byTime' ? dotHeight : dotHeight * 0.75) * (binThresholds-1);
+    // for time xScale
+    const timeBandWidth = (viewType === 'byTime' ? dotHeight : dotHeight * 0.75) * (binThresholds - 1);
 
-
+    // calculate party positions - could optimise to only run on
     const getPartyPositions = () => {
         const padding = dotRadius;
         const partyType = byPartyNorth.map((m) => m[0]);
+        // get max rows for each party
         const partyMax = partyType.map((m) => ({
             party: m,
             max: Math.max(
@@ -142,14 +140,17 @@ const drawChart = (div, data, width,windowHeight) => {
                 byPartySouth.find((f) => f[0] === m)[1].length
             )
         }));
-        const maxTotal = d3.sum(partyMax, (s) => s.max);
 
+        const maxTotal = d3.sum(partyMax, (s) => s.max);
         let propAcc = 0;
         let totalWidth =
             width - margin.left - margin.right - padding * partyType.length;
-        if(isMobile){
+        if (isMobile) {
             totalWidth = timeBandWidth;
         }
+        // loop through and assign relative party position
+        // Conservative + Liberal were so much bigger than label that this fitted better than a standard
+        // band scale
         return partyMax.reduce((acc, entry) => {
             const prop = entry.max / maxTotal;
             const partyWidth = totalWidth * prop;
@@ -166,6 +167,8 @@ const drawChart = (div, data, width,windowHeight) => {
     }
     const partyPositions = getPartyPositions();
 
+    // now reduce the location data and calculate positions for all view types
+    // could be optimised so only runs if needed
     const pmPositioned = byLocation.reduce((acc, entry) => {
         const isSouth = entry[0] === "Other";
         const matchingBinArray = isSouth ? nodeBinsSouth : nodeBinsNorth;
@@ -187,23 +190,26 @@ const drawChart = (div, data, width,windowHeight) => {
             const partyIndex = partyGroup[1].findIndex(
                 (f) => f.photoName === e.photoName
             );
-            const partyDotsPerRow = Math.floor(partyPosition.partyWidth / (dotRadius * 2.5))
+            const partyDotsPerRow = Math.floor(partyPosition.partyWidth / (dotRadius * 2.5));
+
+            // returns 'waffle chart' style calculated positions depending on chart type
+            // the small version simply flips the axes
             acc.push({
                 homePos: {
-                    x:  (i % dotsPerRow) * dotHeight,
-                    y:  Math.floor(i / dotsPerRow) * dotHeight,
+                    x: (i % dotsPerRow) * dotHeight,
+                    y: Math.floor(i / dotsPerRow) * dotHeight,
                     xCount: (i % dotsPerRow) + 1,
                     row: Math.floor(i / dotsPerRow) + 1
                 },
                 timePos: {
-                    x:  dotHeight * matchingBinIndex,
-                    y:  yMultiple * (binValuesIndex + 1),
+                    x: dotHeight * matchingBinIndex,
+                    y: yMultiple * (binValuesIndex + 1),
                     xCount: matchingBinIndex + 1,
                     row: binValuesIndex + 1
                 },
                 timePosSmall: {
-                    y:  dotHeight * matchingBinIndex,
-                    x:  yMultiple * (binValuesIndex + 1),
+                    y: dotHeight * matchingBinIndex,
+                    x: yMultiple * (binValuesIndex + 1),
                     row: matchingBinIndex + 1,
                     xCount: binValuesIndex + 1
                 },
@@ -233,137 +239,143 @@ const drawChart = (div, data, width,windowHeight) => {
         return acc;
     }, [])
 
+    // fetches the appropriate position depending on viewType and isMobile
     const getPos = (d) => {
-        if( viewType === "home") return d.homePos;
-        if(viewType === "byTime") {
-            if(isMobile) return d.timePosSmall;
+        if (viewType === "home") return d.homePos;
+        if (viewType === "byTime") {
+            if (isMobile) return d.timePosSmall;
             return d.timePos;
         }
-        if(isMobile) return d.partyPosSmall;
+        if (isMobile) return d.partyPosSmall;
         return d.partyPos
     };
 
     const getMaxNorth = () => {
-        if(viewType === 'byTime') return d3.max(nodeBinsNorth, (d) => d.length);
-       // if(viewType === 'byParty') return d3.max(byPartyNorth, (d) => d[1].length);
+        if (viewType === 'byTime') return d3.max(nodeBinsNorth, (d) => d.length);
+        // if(viewType === 'byParty') return d3.max(byPartyNorth, (d) => d[1].length);
         return d3.max(pmPositioned.filter((f) => !f.isSouth), (d) => getPos(d).row)
     }
 
     const getMaxSouth = () => {
-        if(viewType === 'byTime') return d3.max(nodeBinsSouth, (d) => d.length);
-      //  if(viewType === 'byParty') return d3.max(byPartySouth, (d) => d[1].length);
+        if (viewType === 'byTime') return d3.max(nodeBinsSouth, (d) => d.length);
+        //  if(viewType === 'byParty') return d3.max(byPartySouth, (d) => d[1].length);
         return d3.max(pmPositioned.filter((f) => f.isSouth), (d) => getPos(d).row)
     }
 
-    const northHeight = rectExtra +  getMaxNorth() * dotHeight;
+    // calculate the height + label strings for the North/South rectangles and labels
+    const northHeight = rectExtra + getMaxNorth() * dotHeight;
     const southStart = northHeight + (labelHeight * (viewType === 'byTime' ? 2 : 3));
     const southHeight = rectExtra + getMaxSouth() * dotHeight;
 
     const timeSmallAxisWidth = labelHeight * 1.5
-    const timeWidth = (chartWidth - timeSmallAxisWidth)/2;
+    const timeWidth = (chartWidth - timeSmallAxisWidth) / 2;
     const timeSouthLeft = timeWidth + timeSmallAxisWidth;
 
     const newChartHeight = southStart + southHeight + margin.top + margin.bottom;
-    if(newChartHeight > chartHeight){
+    // adapts the chart height if needed
+    if (newChartHeight > chartHeight) {
         chartHeight = newChartHeight;
     }
-    console.log(chartHeight, windowHeight - headerMenuHeight);
+
     svg.attr("height", `${chartHeight}px`);
-    if(isTimeSmall) {
+    if (isTimeSmall) {
         svg.attr("height", `${timeBandWidth + margin.top + margin.bottom}px`);
     }
 
-   const totalNorth = primeMinisters.filter((f) => f.Location === "N" || f.Location === "NS");
-   const northProp = totalNorth.length/primeMinisters.length;
-   const southProp = 1 - northProp;
-   const fontSizeBig = isMobile ? 18 : 24;
-   const fontSizeSmall = isMobile ? 14 : 16;
+    const totalNorth = primeMinisters.filter(isNorthern);
+    const northProp = totalNorth.length / primeMinisters.length;
+    const southProp = 1 - northProp;
+    const fontSizeBig = isMobile ? 18 : 24;
+    const fontSizeSmall = isMobile ? 14 : 16;
 
-   const northPercentVal = d3.format(".0%")(northProp);
+    const northPercentVal = d3.format(".0%")(northProp);
 
-   const bornText = width < 600 ? " " : " born in the ";
-   const northWidth = measureWidth(northPercentVal, fontSizeBig)
-       + measureWidth(bornText, fontSizeSmall)
-       + measureWidth("North", fontSizeBig);
+    const bornText = width < 600 ? " " : " born in the ";
+
+    // svg text elements are separated into tspan's to allow different word styling
+    const northWidth = measureWidth(northPercentVal, fontSizeBig)
+        + measureWidth(bornText, fontSizeSmall)
+        + measureWidth("North", fontSizeBig);
 
     svg.select(".northLabel")
-        .style("dominant-baseline","baseline")
-        .attr("x", isTimeSmall ? timeWidth + rectExtra - northWidth: (width - northWidth)/2)
-        .attr("y",margin.labelTop + labelHeight  - 6)
-        .attr("fill",colors.MidGy)
+        .style("dominant-baseline", "baseline")
+        .attr("x", isTimeSmall ? timeWidth + rectExtra - northWidth : (width - northWidth) / 2)
+        .attr("y", margin.labelTop + labelHeight - 6)
+        .attr("fill", colors.MidGy)
 
     svg.select(".northLabelPercent")
-        .attr("fill",colors.Bk)
-        .attr("font-size",fontSizeBig)
+        .attr("fill", colors.Bk)
+        .attr("font-size", fontSizeBig)
         .text(northPercentVal);
 
     svg.select(".northLabelText")
-        .attr("font-size",fontSizeSmall)
+        .attr("font-size", fontSizeSmall)
         .text(bornText);
 
     svg.select(".northLabelNorth")
-        .attr("text-anchor","start")
-        .attr("font-size",fontSizeBig)
-        .attr("fill",colors.N)
+        .attr("text-anchor", "start")
+        .attr("font-size", fontSizeBig)
+        .attr("fill", colors.N)
         .text("North");
 
     svg.select(".northBackRect")
-        .attr("fill",colors.N)
-        .attr("fill-opacity",0.1)
-        .attr("rx",5)
-        .attr("ry",5)
-        .attr("x", margin.left )
+        .attr("fill", colors.N)
+        .attr("fill-opacity", 0.1)
+        .attr("rx", 5)
+        .attr("ry", 5)
+        .attr("x", margin.left)
         .attr("y", margin.labelTop + labelHeight)
-        .attr("width",isTimeSmall ? timeWidth : chartWidth)
+        .attr("width", isTimeSmall ? timeWidth : chartWidth)
         .attr("height", isTimeSmall ? timeBandWidth + dotHeight : northHeight);
 
     const southPercentVal = d3.format(".0%")(southProp);
+
     const southWidth = measureWidth(southPercentVal, fontSizeBig)
         + measureWidth(bornText, fontSizeSmall)
         + measureWidth("South", fontSizeBig)
-    + measureWidth(" or ", fontSizeSmall)
+        + measureWidth(" or ", fontSizeSmall)
         + measureWidth("Elsewhere", fontSizeBig);
 
     svg.select(".southLabel")
-        .style("dominant-baseline","baseline")
-        .attr("x",isTimeSmall ? timeSouthLeft + rectExtra :(width - southWidth)/2 )
+        .style("dominant-baseline", "baseline")
+        .attr("x", isTimeSmall ? timeSouthLeft + rectExtra : (width - southWidth) / 2)
         .attr("y", margin.labelTop + (isTimeSmall ? labelHeight - 6 : southStart - 6 +
-            (viewType === "byTime" || viewType === 'byParty'? southHeight + labelHeight : 0)))
-        .attr("fill",colors.MidGy)
+            (viewType === "byTime" || viewType === 'byParty' ? southHeight + labelHeight : 0)))
+        .attr("fill", colors.MidGy)
 
 
     svg.select(".southLabelPercent")
-        .attr("font-size",fontSizeBig)
-        .attr("fill",colors.Bk)
-        .text(northPercentVal);
+        .attr("font-size", fontSizeBig)
+        .attr("fill", colors.Bk)
+        .text(southPercentVal);
 
     svg.select(".southLabelText")
-        .attr("font-size",fontSizeSmall)
+        .attr("font-size", fontSizeSmall)
         .text(bornText);
 
     svg.select(".southLabelSouth")
-        .attr("text-anchor","start")
-        .attr("font-size",fontSizeBig)
-        .attr("fill",colors.S)
+        .attr("text-anchor", "start")
+        .attr("font-size", fontSizeBig)
+        .attr("fill", colors.S)
         .text("South");
 
     svg.select(".southLabelText2")
-        .attr("font-size",fontSizeSmall)
+        .attr("font-size", fontSizeSmall)
         .text(" or ");
 
     svg.select(".southLabelElsewhere")
-        .attr("text-anchor","start")
-        .attr("font-size",fontSizeBig)
-        .attr("fill",colors.I)
+        .attr("text-anchor", "start")
+        .attr("font-size", fontSizeBig)
+        .attr("fill", colors.I)
         .text("Elsewhere");
 
     svg.select(".southBackRect")
-        .attr("fill",colors.S)
-        .attr("fill-opacity",0.1)
-        .attr("rx",5)
-        .attr("ry",5)
+        .attr("fill", colors.S)
+        .attr("fill-opacity", 0.1)
+        .attr("rx", 5)
+        .attr("ry", 5)
         .attr("x", margin.left + (isTimeSmall ? timeSouthLeft : 0))
-        .attr("y", margin.labelTop + (isTimeSmall ? labelHeight: southStart))
+        .attr("y", margin.labelTop + (isTimeSmall ? labelHeight : southStart))
         .attr("width", isTimeSmall ? timeWidth : chartWidth)
         .attr("height", isTimeSmall ? timeBandWidth + dotHeight : southHeight);
 
@@ -378,20 +390,21 @@ const drawChart = (div, data, width,windowHeight) => {
         (g) => getPos(g).row
     )];
 
+    // for viewType home, centre pmCircles within their horizontal space
     pmPositioned.map((m) => {
         const position = getPos(m);
         const circleRow = m.isSouth ? circleRowSouth : circleRowNorth;
         const rowCircles = circleRow.find((f) => f[0] === position.row);
-        const xMargin = chartWidth  -((rowCircles[1] - 1) * dotHeight);
-        let extraX = xMargin/2;
-         if (viewType === "byTime" || viewType === "byParty") {
+        const xMargin = chartWidth - ((rowCircles[1] - 1) * dotHeight);
+        let extraX = xMargin / 2;
+        if (viewType === "byTime" || viewType === "byParty") {
             extraX = dotHeight * 0.75;
         }
         m.extraX = extraX;
     })
 
-    const xScaleTimeBands = nodeBinsNorth.map((m,i) => i);
-
+    // x axis - by time only, flips vertical for isMobile
+    const xScaleTimeBands = nodeBinsNorth.map((m, i) => i);
     const xAxisTime = svg.select(".xAxisTime");
     const timeXScale = d3.scalePoint().padding(0).domain(xScaleTimeBands).range([0, timeBandWidth]);
 
@@ -400,22 +413,24 @@ const drawChart = (div, data, width,windowHeight) => {
         .call(d3[isMobile ? 'axisLeft' : 'axisBottom'](timeXScale).tickSizeOuter(0).tickValues(xScaleTimeBands))
         .attr(
             "transform",
-            `translate(${isMobile ? width/2 : margin.left + dotRadius  * 1.9},${
-                isMobile ? margin.top :  southStart - labelHeight + margin.labelTop
+            `translate(${isMobile ? width / 2 : margin.left + dotRadius * 1.9},${
+                isMobile ? margin.top : southStart - labelHeight + margin.labelTop
             })`
         );
 
     const binIncrement = binThresholds === 30 ? 10 : 20;
+
     xAxisTime.selectAll("line").attr("display", "none");
     xAxisTime.selectAll("path").attr("display", "none");
     xAxisTime.selectAll("text")
         .attr("fill", colors.MidGy)
         .style("text-anchor", "middle")
-        .attr("x",0)
+        .attr("x", 0)
         .attr("font-size", 16)
         .text((d) => 1720 + (binIncrement * d));
 
 
+    // party labels - byParty only - added a background rect to add emphasis and help readability
     const partyLabelGroup = svg
         .selectAll(".partyLabelGroup")
         .data(viewType === 'byParty' ? byPartySouth.map((m) => m[0]) : [])
@@ -429,53 +444,56 @@ const drawChart = (div, data, width,windowHeight) => {
 
     partyLabelGroup.attr("transform", (d) => {
         const partyPos = partyPositions.find((f) => f.party === d);
-        if(viewType === "byParty") {
-            if(isMobile){
+        if (viewType === "byParty") {
+            if (isMobile) {
                 return `translate(${margin.left + timeWidth + labelHeight * 0.7},${partyPos.labelX + margin.labelTop + labelHeight}) rotate(90)`;
             }
-            const yPos = southStart + fontSizeBig/2;
+            const yPos = southStart + fontSizeBig / 2;
             return `translate(${partyPos.labelX + margin.left + rectExtra},${yPos})`;
         }
         // only applies to byParty
         return ""
     })
 
-    const labelMapper = {"Conservative": "Tory / Conservative", "Liberal": "Whig / Liberal", "Labour" :"Labour"}
+    // feedback said I needed to specify Tory + Whig as well
+    const labelMapper = {"Conservative": "Tory / Conservative", "Liberal": "Whig / Liberal", "Labour": "Labour"}
+
     partyLabelGroup.select(".partyLabel")
-        .attr("font-size",fontSizeBig)
-        .attr("fill",(d) => colors[d])
-        .style("dominant-baseline","middle")
-        .attr("text-anchor","middle")
+        .attr("font-size", fontSizeBig)
+        .attr("fill", (d) => colors[d])
+        .style("dominant-baseline", "middle")
+        .attr("text-anchor", "middle")
         .text((d) => labelMapper[d])
 
     partyLabelGroup.select(".partyLabelRect")
-        .attr("font-size",fontSizeBig)
-        .attr("fill",(d) => colors[d])
-        .attr("fill-opacity",0.1)
-        .attr("rx",4)
-        .attr("ry",4)
+        .attr("font-size", fontSizeBig)
+        .attr("fill", (d) => colors[d])
+        .attr("fill-opacity", 0.1)
+        .attr("rx", 4)
+        .attr("ry", 4)
         .attr("height", labelHeight)
-        .attr("width",(d) => {
+        .attr("width", (d) => {
             const partyPos = partyPositions.find((f) => f.party === d);
             return partyPos.partyWidth;
         })
-        .attr("x",(d) => {
+        .attr("x", (d) => {
             const partyPos = partyPositions.find((f) => f.party === d);
-            return -partyPos.partyWidth/2;
+            return -partyPos.partyWidth / 2;
         })
         .attr("y", -labelHeight * 0.55)
-        .style("dominant-baseline","middle")
-        .attr("text-anchor","middle")
+        .style("dominant-baseline", "middle")
+        .attr("text-anchor", "middle")
         .text((d) => d)
 
 
+    // team circles - mapped to photoNames so animation works correctly
     const teamGroup = svg
         .selectAll(".teamGroup")
-        .data(pmPositioned)
+        .data(pmPositioned, (d) => d.photoName)
         .join((group) => {
             const enter = group.append("g").attr("class", "teamGroup");
-            enter.append("circle").attr("class", "teamCircle");
-            enter.append("circle").attr("class", "teamCircleBackground");
+            enter.append("circle").attr("class", "pmCircle");
+            enter.append("circle").attr("class", "pmCircleBackground");
             const defs = enter.append("defs");
             defs
                 .append("pattern")
@@ -487,23 +505,27 @@ const drawChart = (div, data, width,windowHeight) => {
         });
 
     const getTransform = (d) => {
-        const xPos =  margin.left + getPos(d).x + d.extraX;
+        // slightly complex transform depending on different scenarios
+        const xPos = margin.left + getPos(d).x + d.extraX;
         const southExtra = southStart - dotRadius - rectExtra;
         const viewExtra = () => {
-            if(viewType === 'byTime' || 'byParty') return northHeight - dotHeight - rectExtra;
+            if (viewType === 'byTime' || 'byParty') return northHeight - dotHeight - rectExtra;
             return 0;
         }
-        const yPos =  margin.top +
+        const yPos = margin.top +
             getPos(d).y
-            + (d.isSouth ? southExtra: viewExtra())
-        if(!isTimeSmall) return `translate(${xPos},${yPos})`
-        const smallXPos =  width/2 + getPos(d).x + (d.isSouth ? dotHeight : -dotHeight);
-        const smallYPos = margin.labelTop + getPos(d).y + labelHeight + dotRadius + rectExtra/2;
+            + (d.isSouth ? southExtra : viewExtra())
+            - (viewType === 'home' && !d.isSouth ? northHeight - dotHeight - rectExtra : 0)
+        if (!isTimeSmall) return `translate(${xPos},${yPos})`
+        const smallXPos = width / 2 + getPos(d).x + (d.isSouth ? dotHeight : -dotHeight);
+        const smallYPos = margin.labelTop + getPos(d).y + labelHeight + dotRadius + rectExtra / 2;
         return `translate(${smallXPos},${smallYPos})`;
 
     }
-    teamGroup.attr(
-        "transform",getTransform);
+    teamGroup
+        .transition()
+        .duration(transitionTime)
+        .attr("transform", getTransform);
 
     teamGroup
         .select(".nodePattern")
@@ -518,8 +540,8 @@ const drawChart = (div, data, width,windowHeight) => {
         .attr("width", dotRadius * 2);
 
     teamGroup
-        .select(".teamCircleBackground")
-        .attr("id","chart")
+        .select(".pmCircleBackground")
+        .attr("id", "chart")
         .attr("pointer-events", "none")
         .attr("r", dotRadius + 2)
         .attr("fill", "transparent")
@@ -527,78 +549,88 @@ const drawChart = (div, data, width,windowHeight) => {
         .style("stroke-width", 6)
         .style("stroke-opacity", 0)
 
-
     teamGroup
-        .select(".teamCircle")
+        .select(".pmCircle")
         .attr("r", dotRadius)
         .attr("fill", (d, i) => `url(#pmImage${i})`)
         .attr("stroke-width", 3)
         .attr("stroke", (d) => colors[d.data["Political Party"]])
-        .on("mousemove",(event,d) => {
-            const highlight = d.data.Location === "N" || d.data.Location === "NS" ? "highlightNorth" : "highlightSouth";
+        .attr("cy", viewType === 'byTime' && width < 450 ? -2 : 0) // quick fix for mobile view as Keir overlaps
+        .attr("cx", (d) => viewType === 'byTime' && width < 450 ? (d.isSouth ? 3 : -3) : 0)
+        .on("mousemove", (event, d) => {
+            // tooltip on mousemove
+            const highlight = isNorthern(d.data) ? "highlightNorth" : "highlightSouth";
             d3.select(".northLabel").attr("opacity", highlight === "highlightNorth" ? 1 : 0.2);
             d3.select(".southLabel").attr("opacity", highlight === "highlightSouth" ? 1 : 0.2);
             let tooltipText = `<span class='highlightBlack'>${d.data["Prime Minister"]}</span><br>`;
             tooltipText += `born: <span class='${highlight}'> ${d.data.Birthplace}</span><br>`
             tooltipText += `<span style="color:${colors[d.data["Political Party"]]}">${d.data["Political Party"]}</span><br>`;
             tooltipText += `from ${new Date(d.data["Term Start"]).getFullYear()} to ${new Date(d.data["Term End"]).getFullYear()}<br>`;
-            if(d.data.terms > 1){
+            if (d.data.terms > 1) {
                 tooltipText += `over ${d.data.terms} terms`;
-
             }
+            const tooltipLeft = event.pageX > (window.innerWidth - 120) ? event.pageX - 150 : event.pageX + dotRadius;
             d3.select(".chartTooltip")
-                .style("left", `${event.pageX + dotRadius}px`)
+                .style("left", `${tooltipLeft}px`)
                 .style("top", `${event.pageY - 12}px`)
                 .style("visibility", "visible")
                 .html(tooltipText);
         })
         .on("mouseover", (event, d) => {
-            d3.selectAll(".teamCircleBackground#map")
-                .classed("pulse",(c) => c.photoName === d.photoName)
-            d3.selectAll(".teamCircle")
-                .attr("opacity",(c) => c.photoName === d.photoName ? 1 : 0.3);
-
+            // selection on mouseover - pulse is in css
+            // using d3. rather than svg. here as selecting map circles with same class here
+            d3.selectAll(".pmCircleBackground#map")
+                .classed("pulse", (c) => c.photoName === d.photoName)
+            d3.selectAll(".pmCircle")
+                .attr("opacity", (c) => c.photoName === d.photoName ? 1 : 0.3);
         })
         .on("mouseout", () => {
-            d3.select(".northLabel").attr("opacity",1);
-            d3.select(".southLabel").attr("opacity",1)
-            d3.selectAll(".teamCircleBackground").classed("pulse",false);
-            d3.selectAll(".teamCircle").attr("opacity",1);
+            d3.select(".northLabel").attr("opacity", 1);
+            d3.select(".southLabel").attr("opacity", 1)
+            d3.selectAll(".pmCircleBackground").classed("pulse", false);
+            d3.selectAll(".pmCircle").attr("opacity", 1);
             d3.select(".chartTooltip").style("visibility", "hidden");
-        });;
-
-
-
+        });
 }
-const drawMap = (div, data, width, height) => {
+const drawMap = (div, data, width, height, redrawChart) => {
 
     let svg = div.select(".mapSvg");
 
+    // non data dependent elements
     if (svg.empty()) {
-        svg = div.append("svg").attr("class","noselect mapSvg");
-         svg.append("g").attr("class","mapGroup");
-        svg.append("line").attr("class","dividerLine");
+        svg = div.append("svg").attr("class", "noselect mapSvg");
+        svg.append("g").attr("class", "mapGroup");
+        svg.append("line").attr("class", "dividerLine");
+        svg.append("text").attr("class", "scotland1");
+        svg.append("text").attr("class", "scotland2");
+        svg.append("text").attr("class", "scotland3");
+        svg.append("text").attr("class", "scotlandY fa");  // you need cdn for FA icons to work + this class
+        svg.append("text").attr("class", "scotlandN fa");
     }
 
     const mapGroup = svg.select(".mapGroup");
 
-    svg.attr("width",`${width}px`)
-        .attr("height",`${height}px`);
+    svg.attr("width", `${width}px`)
+        .attr("height", `${height}px`);
 
+    // key variables
     const {primeMinisters, ukIrelandAll} = data;
     const padding = 10;
     const mapHeight = height - (padding * 2);
-    const mapWidth = 5 * (mapHeight/6);
-    const sideMargin = (width - mapWidth)/2;
+    const mapWidth = 5 * (mapHeight / 6);
+    const sideMargin = (width - mapWidth) / 2;
+    const circleRadius = 2;
+    let furtherX = 10 + circleRadius;
 
+    // projection + path
     const projection = d3
         .geoMercator()
         .fitSize([mapWidth, mapHeight], ukIrelandAll);
 
-    const circleRadius = 2;
+    const path = d3.geoPath(projection);
 
-    let furtherX = 10 + circleRadius;
-
+    // use projection to add location centroids
+    // F === foreign - aligned top left
     const pmData = primeMinisters.reduce((acc, entry) => {
         if (entry.Location !== "F") {
             entry.centroid = projection([
@@ -613,9 +645,91 @@ const drawMap = (div, data, width, height) => {
         return acc;
     }, []);
 
+    // quick add on for clarity - argument about this issue
+    svg.select(".scotland1")
+        .attr("pointer-events", "none")
+        .attr("text-anchor", "end")
+        .attr("fill", colors.MidGy)
+        .attr("font-size", 14)
+        .attr("x", width - padding)
+        .attr("y", padding + 10)
+        .text("Is Scotland")
 
-    const path = d3.geoPath(projection);
+    svg.select(".scotland2")
+        .attr("pointer-events", "none")
+        .attr("text-anchor", "end")
+        .attr("fill", colors.N)
+        .attr("font-size", 14)
+        .attr("x", width - padding - 9)
+        .attr("y", padding + 26)
+        .text("Northern")
 
+    svg.select(".scotland3")
+        .attr("pointer-events", "none")
+        .attr("text-anchor", "end")
+        .attr("fill", colors.MidGy)
+        .attr("font-size", 14)
+        .attr("x", width - padding)
+        .attr("y", padding + 26)
+        .text("?")
+
+    const toggleScotland = () => {
+        if (window.includeScotland) {
+            d3.select(".scotlandY")
+                .attr("fill", colors.Gy);
+
+            d3.select(".scotland2")
+                .attr("fill", colors.MidGy);
+
+            d3.select(".scotlandN")
+                .attr("fill", colors.I);
+            window.includeScotland = false
+        } else {
+            d3.select(".scotland2")
+                .attr("fill", colors.N)
+            d3.select(".scotlandY")
+                .attr("fill", colors.N);
+
+            d3.select(".scotlandN")
+                .attr("fill", colors.Gy);
+            window.includeScotland = true
+        }
+        svg.selectAll(".pmCircle")
+            .attr("fill", getMapDotColor);
+        svg.selectAll(".pmCircleBackground")
+            .attr("stroke", getMapDotColor)
+        redrawChart();
+    }
+
+    const getMapDotColor = (d) => {
+        if (d.Location === "NS") {
+            return isNorthern(d) ? colors.N : colors.I;
+        }
+        return colors[d.Location]
+    }
+
+    svg.select(".scotlandY")
+        .attr("cursor", "pointer")
+        .attr("text-anchor", "end")
+        .attr("fill", colors.N)
+        .attr("font-size", 14)
+        .attr("x", width - padding - 24)
+        .attr("y", padding + 47)
+        .text("\uf058")
+        .on("click", toggleScotland);
+
+    svg.select(".scotlandN")
+        .attr("cursor", "pointer")
+        .attr("text-anchor", "end")
+        .attr("fill", colors.Gy)
+        .attr("font-size", 14)
+        .attr("x", width - padding - 7)
+        .attr("y", padding + 47)
+        .text("\uf057")
+        .on("click", toggleScotland);
+
+
+    // geojson features
     const continentGroup = mapGroup
         .selectAll(".continentGroup")
         .data(ukIrelandAll.features)
@@ -625,7 +739,7 @@ const drawMap = (div, data, width, height) => {
             return enter;
         });
 
-    continentGroup.attr("transform",`translate(${sideMargin},${padding})`)
+    continentGroup.attr("transform", `translate(${sideMargin},${padding})`)
 
     continentGroup
         .select(".continentPath")
@@ -634,13 +748,14 @@ const drawMap = (div, data, width, height) => {
         .style("stroke-linecap", "round")
         .attr("fill", colors.Gy);
 
+    // team circles
     const teamGroup = mapGroup
         .selectAll(".teamGroup")
         .data(pmData)
         .join((group) => {
             const enter = group.append("g").attr("class", "teamGroup");
-            enter.append("circle").attr("class", "teamCircle");
-            enter.append("circle").attr("class", "teamCircleBackground");
+            enter.append("circle").attr("class", "pmCircle");
+            enter.append("circle").attr("class", "pmCircleBackground");
 
             const defs = enter.append("defs");
             defs
@@ -668,31 +783,31 @@ const drawMap = (div, data, width, height) => {
         .attr("width", circleRadius * 2);
 
     teamGroup
-        .select(".teamCircleBackground")
-        .attr("id","map")
+        .select(".pmCircleBackground")
+        .attr("id", "map")
         .attr("pointer-events", "none")
         .attr("r", circleRadius)
         .attr("fill", "transparent")
-        .attr("stroke", (d) => colors[d.Location])
+        .attr("stroke", getMapDotColor)
         .style("stroke-width", 4)
         .style("stroke-opacity", 0)
 
-
     teamGroup
-        .select(".teamCircle")
+        .select(".pmCircle")
         .attr("r", circleRadius)
-        .attr("fill", (d) => colors[d.Location])
+        .attr("fill", getMapDotColor)
         .style("stroke-width", 0)
         .on("mouseover", (event, d) => {
-            d3.selectAll(".teamCircleBackground#chart")
-                .classed("pulse",(c) => c.photoName === d.photoName);
-            d3.selectAll(".teamCircle")
-                .attr("opacity",(c) => c.photoName === d.photoName ? 1 : 0.3);
-            const highlight = d.Location === "N" || d.Location === "NS" ? "highlightNorth" : "highlightSouth";
+            // no mousemove separation here as circles so small
+            d3.selectAll(".pmCircleBackground#chart")
+                .classed("pulse", (c) => c.photoName === d.photoName);
+            d3.selectAll(".pmCircle")
+                .attr("opacity", (c) => c.photoName === d.photoName ? 1 : 0.3);
+            const highlight = isNorthern(d.Location) ? "highlightNorth" : "highlightSouth";
             d3.select(".northLabel").attr("opacity", highlight === "highlightNorth" ? 1 : 0.2);
             d3.select(".southLabel").attr("opacity", highlight === "highlightSouth" ? 1 : 0.2);
             d3.select(".chartTooltip")
-                .style("left", `${event.pageX -130}px`)
+                .style("left", `${event.pageX - 130}px`)
                 .style("top", `${event.pageY}px`)
                 .style("visibility", "visible")
                 .html(`<span class='highlightBlack'>${d["Prime Minister"]}</span> born in <span class='${highlight}'> ${d.Birthplace}</span>`);
@@ -701,12 +816,12 @@ const drawMap = (div, data, width, height) => {
         .on("mouseout", () => {
             d3.select(".northLabel").attr("opacity", 1);
             d3.select(".southLabel").attr("opacity", 1);
-
-            d3.selectAll(".teamCircle").attr("opacity",1);
-            d3.selectAll(".teamCircleBackground").classed("pulse",false);
+            d3.selectAll(".pmCircle").attr("opacity", 1);
+            d3.selectAll(".pmCircleBackground").classed("pulse", false);
             d3.select(".chartTooltip").style("visibility", "hidden");
         });
 
+    // ChatGPT estimate of Severn–Wash divide
     const divide = [
         [-3.2, 52.35],
         [1.3, 53.1]
@@ -723,7 +838,7 @@ const drawMap = (div, data, width, height) => {
         .attr("stroke-width", 1)
         .attr("stroke", "#484848");
 
-    // simulation to move region circles into place
+    // simulation to add a beeswarm element to the location circles as there was a bit of overlap
     const simulation = d3
         .forceSimulation()
         .alphaDecay(0.1)
@@ -742,7 +857,6 @@ const drawMap = (div, data, width, height) => {
 
     // transform group
     teamGroup.attr("transform", (d) => `translate(${d.x + sideMargin},${d.y + padding})`);
-
 
 
 }

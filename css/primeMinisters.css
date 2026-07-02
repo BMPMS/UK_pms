@@ -1,7 +1,8 @@
-body,html {
+body, html {
     margin: 0;
     padding: 0;
 }
+
 body {
     background-image: url("portcullis.svg");
     background-repeat: repeat;
@@ -20,7 +21,7 @@ body {
     font-family: "FigJam", sans-serif;
 }
 
-.chartDiv,.map {
+.chartDiv, .map {
     padding: 0;
     margin: 0;
 }
@@ -34,7 +35,7 @@ body {
 }
 
 .title {
-    height: 150px;
+    height: 130px;
     font-size: 38px;
     display: grid;
     vertical-align: middle;
@@ -43,22 +44,24 @@ body {
     text-align: center;
 }
 
-.highlightBlack{
+.highlightBlack {
     color: #111111;
 }
-.highlightNorth{
-   color:  #00897B;
-}
-.highlightSouth{
-    color:  #7E3F8F;
+
+.highlightNorth {
+    color: #00897B;
 }
 
-.highlightMidGrey{
-    color:  #6B7280;
+.highlightSouth {
+    color: #7E3F8F;
+}
+
+.highlightMidGrey {
+    color: #6B7280;
 }
 
 .subtitle {
-    height: 100px;
+    height: 120px;
     font-size: 16px;
     display: grid;
     vertical-align: middle;
@@ -66,7 +69,8 @@ body {
     align-items: center;
     text-align: center;
 }
-.innerSubtitle{
+
+.innerSubtitle {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
 }
@@ -160,6 +164,7 @@ body {
     .footer {
         font-size: 14px;
     }
+
     .title {
         position: sticky;
         top: 0;
@@ -171,7 +176,6 @@ body {
         margin: 0;
         background-color: white;
     }
-
 
     .subtitle {
         width: 100%;
@@ -190,7 +194,6 @@ body {
     .menu {
         position: sticky;
         top: 90px;
-        height: 30px;
         width: 100%;
         height: 50px;
         z-index: 2;
@@ -204,8 +207,12 @@ body {
 }
 
 @keyframes pulse {
-    0%, 100% { stroke-opacity: 0;}
-    50%       {stroke-opacity: 0.6;}
+    0%, 100% {
+        stroke-opacity: 0;
+    }
+    50% {
+        stroke-opacity: 0.6;
+    }
 }
 
 
@@ -214,7 +221,7 @@ body {
 }
 
 a {
-    color: #00897B ;       /* Use the surrounding text color */
-    text-decoration: none;   /* Remove the underline */
+    color: #00897B; /* Use the surrounding text color */
+    text-decoration: none; /* Remove the underline */
 }
 
