@@ -442,7 +442,8 @@ const drawChart = (div, data, width, windowHeight, transitionTime) => {
             return enter;
         });
 
-    partyLabelGroup.attr("transform", (d) => {
+    partyLabelGroup
+        .attr("transform", (d) => {
         const partyPos = partyPositions.find((f) => f.party === d);
         if (viewType === "byParty") {
             if (isMobile) {
@@ -583,10 +584,14 @@ const drawChart = (div, data, width, windowHeight, transitionTime) => {
                 .classed("pulse", (c) => c.photoName === d.photoName)
             d3.selectAll(".pmCircle")
                 .attr("opacity", (c) => c.photoName === d.photoName ? 1 : 0.3);
+
+            d3.selectAll(".partyLabelGroup")
+                .attr("opacity", (p) => p === d.minParty ? 1 : 0.3);
         })
         .on("mouseout", () => {
             d3.select(".northLabel").attr("opacity", 1);
-            d3.select(".southLabel").attr("opacity", 1)
+            d3.select(".southLabel").attr("opacity", 1);
+            d3.selectAll(".partyLabelGroup").attr("opacity", 1);
             d3.selectAll(".pmCircleBackground").classed("pulse", false);
             d3.selectAll(".pmCircle").attr("opacity", 1);
             d3.select(".chartTooltip").style("visibility", "hidden");
@@ -806,6 +811,8 @@ const drawMap = (div, data, width, height, redrawChart) => {
             const highlight = isNorthern(d.Location) ? "highlightNorth" : "highlightSouth";
             d3.select(".northLabel").attr("opacity", highlight === "highlightNorth" ? 1 : 0.2);
             d3.select(".southLabel").attr("opacity", highlight === "highlightSouth" ? 1 : 0.2);
+            d3.selectAll(".partyLabelGroup")
+                .attr("opacity", (p) => p === d.minParty ? 1 : 0.3);
             d3.select(".chartTooltip")
                 .style("left", `${event.pageX - 130}px`)
                 .style("top", `${event.pageY}px`)
@@ -814,6 +821,7 @@ const drawMap = (div, data, width, height, redrawChart) => {
 
         })
         .on("mouseout", () => {
+            d3.selectAll(".partyLabelGroup").attr("opacity",1);
             d3.select(".northLabel").attr("opacity", 1);
             d3.select(".southLabel").attr("opacity", 1);
             d3.selectAll(".pmCircle").attr("opacity", 1);
