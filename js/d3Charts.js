@@ -561,6 +561,7 @@ const drawChart = (div, data, width, windowHeight, transitionTime) => {
         .on("mousemove", (event, d) => {
             // tooltip on mousemove
             const highlight = isNorthern(d.data) ? "highlightNorth" : "highlightSouth";
+            console.log(highlight)
             d3.select(".northLabel").attr("opacity", highlight === "highlightNorth" ? 1 : 0.2);
             d3.select(".southLabel").attr("opacity", highlight === "highlightSouth" ? 1 : 0.2);
             let tooltipText = `<span class='highlightBlack'>${d.data["Prime Minister"]}</span><br>`;
@@ -808,7 +809,7 @@ const drawMap = (div, data, width, height, redrawChart) => {
                 .classed("pulse", (c) => c.photoName === d.photoName);
             d3.selectAll(".pmCircle")
                 .attr("opacity", (c) => c.photoName === d.photoName ? 1 : 0.3);
-            const highlight = isNorthern(d.Location) ? "highlightNorth" : "highlightSouth";
+            const highlight = isNorthern(d) ? "highlightNorth" : "highlightSouth";
             d3.select(".northLabel").attr("opacity", highlight === "highlightNorth" ? 1 : 0.2);
             d3.select(".southLabel").attr("opacity", highlight === "highlightSouth" ? 1 : 0.2);
             d3.selectAll(".partyLabelGroup")
